@@ -5,7 +5,7 @@ import { Logger } from "@nestjs/common";
 
 async function start() {
   try {
-    // Logger.overrideLogger(true); //false
+    Logger.overrideLogger(false); //false
     const PORT = process.env.PORT || 3030;
      const app = await NestFactory.create(AppModule, {
       logger: ['error', 'warn'],

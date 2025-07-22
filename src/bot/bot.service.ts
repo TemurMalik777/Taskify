@@ -1,15 +1,15 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
-import { Bot, InlineKeyboard, session } from "grammy";
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Bot, InlineKeyboard, session } from 'grammy';
 import {
   Conversation,
   conversations,
   createConversation,
-} from "@grammyjs/conversations";
-import { InjectModel } from "@nestjs/sequelize";
-import { ToBot } from "./models/bot.model";
-import { ConfigService } from "@nestjs/config";
-import { MyContext } from "./types/my-context";
-import { TaskValidator } from "./validators/bot.validator"; // ✅ Validatsiya
+} from '@grammyjs/conversations';
+import { InjectModel } from '@nestjs/sequelize';
+import { ToBot } from './models/bot.model';
+import { ConfigService } from '@nestjs/config';
+import { MyContext } from './types/my-context';
+import { TaskValidator } from './validators/bot.validator';
 
 @Injectable()
 export class BotService implements OnModuleInit {
@@ -18,56 +18,50 @@ export class BotService implements OnModuleInit {
   constructor(
     @InjectModel(ToBot)
     private readonly taskModel: typeof ToBot,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
   ) {}
 
   async onModuleInit() {
-    const token = this.configService.get<string>("TELEGRAM_BOT_TOKEN");
-    if (!token) throw new Error("TELEGRAM_BOT_TOKEN is missing in .env");
+    const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+    if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing in .env');
 
     this.bot = new Bot<MyContext>(token);
 
-    // ✅ Middlewares
     this.bot.use(session({ initial: () => ({}) }));
     this.bot.use(conversations());
-    this.bot.use(createConversation(this.addTask.bind(this), "addTask"));
+    this.bot.use(createConversation(this.addTask.bind(this), 'addTask'));
 
-    // ✅ Commands
-    this.bot.command("start", (ctx) =>
+    this.bot.command('start', (ctx) =>
       ctx.reply(
-        "📚 Salom! To-Do Books botiga xush kelibsiz.\n\n" +
-          "/add - Vazifa qo‘shish\n" +
-          "/tasks - Vazifalar ro‘yxati\n" +
-          "/complete - Vazifani bajarilgan deb belgilash\n" +
-          "/delete - Vazifani o‘chirish"
-      )
+        '📚 Salom! To-Do Books botiga xush kelibsiz.\n\n' +
+          '/add - Vazifa qo‘shish\n' +
+          '/tasks - Vazifalar ro‘yxati\n' +
+          '/complete - Vazifani bajarilgan deb belgilash\n' +
+          '/delete - Vazifani o‘chirish',
+      ),
     );
 
-    this.bot.command("add", async (ctx) => {
-      await ctx.conversation.enter("addTask");
+    this.bot.command('add', async (ctx) => {
+      await ctx.conversation.enter('addTask');
     });
 
-    this.bot.command("tasks", this.showTasks.bind(this));
-    this.bot.command("complete", this.showCompleteButtons.bind(this));
-    this.bot.command("delete", this.showDeleteButtons.bind(this));
+    this.bot.command('tasks', this.showTasks.bind(this));
+    this.bot.command('complete', this.showCompleteButtons.bind(this));
+    this.bot.command('delete', this.showDeleteButtons.bind(this));
 
-    // ✅ Callbacklar
     this.bot.callbackQuery(/complete_(\d+)/, this.completeTask.bind(this));
     this.bot.callbackQuery(/delete_(\d+)/, this.deleteTask.bind(this));
 
     this.bot.start();
-    console.log("🤖 grammY bot ishga tushdi!");
 
     this.startReminder();
   }
 
-  // ✅ Vazifa qo‘shish (validatsiya bilan)
   private addTask = async (
     conversation: Conversation<MyContext>,
-    ctx: MyContext
+    ctx: MyContext,
   ) => {
-    // ✅ Title validatsiya
-    await ctx.reply("✍️ Vazifa nomini yuboring:");
+    await ctx.reply('Vazifa nomini yuboring:');
     let title: string | undefined;
     while (!title) {
       const { message } = await conversation.wait();
@@ -75,13 +69,12 @@ export class BotService implements OnModuleInit {
         title = message.text.trim();
       } else {
         await ctx.reply(
-          "❌ Noto‘g‘ri nom. Kamida 3 ta belgi bo‘lishi kerak.\nMarhamat, qayta kiriting:"
+          'Noto‘g‘ri nom. Kamida 3 ta belgi bo‘lishi kerak.\nMarhamat, qayta kiriting:',
         );
       }
     }
 
-    // ✅ Sana validatsiya
-    await ctx.reply("📅 Vazifa vaqtini yuboring (format: dd.mm.yyyy hh:mm):");
+    await ctx.reply('Vazifa vaqtini yuboring (format: dd.mm.yyyy hh:mm):');
     let dueDate: string | undefined;
     while (!dueDate) {
       const { message } = await conversation.wait();
@@ -89,29 +82,28 @@ export class BotService implements OnModuleInit {
         dueDate = message.text;
       } else {
         await ctx.reply(
-          "❌ Noto‘g‘ri format. Masalan: 22.07.2025 22:30.\nMarhamat, qayta kiriting:"
+          'Noto‘g‘ri format. Masalan: 22.07.2025 22:30.\nMarhamat, qayta kiriting:',
         );
       }
     }
 
-    // ✅ Priority tugmalar
     const keyboard = new InlineKeyboard()
-      .text("🟢 Low", "priority_low")
-      .text("🟡 Medium", "priority_medium")
-      .text("🔴 High", "priority_high");
+      .text('Low', 'priority_low')
+      .text('Medium', 'priority_medium')
+      .text('High', 'priority_high');
 
-    await ctx.reply("🚦 Darajani tanlang:", { reply_markup: keyboard });
+    await ctx.reply('Darajani tanlang:', { reply_markup: keyboard });
 
-    let priority: "low" | "medium" | "high" | undefined;
+    let priority: 'low' | 'medium' | 'high' | undefined;
     while (!priority) {
       const callback = await conversation.waitForCallbackQuery([
-        "priority_low",
-        "priority_medium",
-        "priority_high",
+        'priority_low',
+        'priority_medium',
+        'priority_high',
       ]);
-      if (callback.match === "priority_low") priority = "low";
-      if (callback.match === "priority_medium") priority = "medium";
-      if (callback.match === "priority_high") priority = "high";
+      if (callback.match === 'priority_low') priority = 'low';
+      if (callback.match === 'priority_medium') priority = 'medium';
+      if (callback.match === 'priority_high') priority = 'high';
 
       await callback.answerCallbackQuery();
     }
@@ -125,84 +117,80 @@ export class BotService implements OnModuleInit {
       isNotified: false,
     });
 
-    await ctx.reply("✅ Vazifa qo‘shildi!");
+    await ctx.reply('Vazifa qo‘shildi!');
   };
 
-  // ✅ Vazifalar ro‘yxatini ko‘rsatish
   private async showTasks(ctx: MyContext) {
     const userId = ctx.from?.id;
     const tasks = await this.taskModel.findAll({ where: { userId } });
 
     if (tasks.length === 0) {
-      return ctx.reply("❌ Sizda hech qanday vazifa yo‘q.");
+      return ctx.reply('Sizda hech qanday vazifa yo‘q.');
     }
 
     const taskList = tasks
       .map(
         (task, i) =>
-          `${i + 1}. ${task.title} | ⏰ ${task.dueDate} | 🚦 ${
+          `${i + 1}. ${task.title} | ${task.dueDate} | ${
             task.priority
-          } | ${task.isCompleted ? "✅ Bajarilgan" : "🔴 Faol"}`
+          } | ${task.isCompleted ? 'Bajarilgan' : ' Faol'}`,
       )
-      .join("\n");
+      .join('\n');
 
     ctx.reply(`📄 Vazifalar:\n${taskList}`);
   }
 
-  // ✅ Bajarilmagan vazifalar uchun tugmalar
   private async showCompleteButtons(ctx: MyContext) {
     const tasks = await this.taskModel.findAll({
       where: { userId: ctx.from!.id, isCompleted: false },
     });
 
     if (tasks.length === 0)
-      return ctx.reply("✅ Barcha vazifalar allaqachon bajarilgan!");
+      return ctx.reply('Barcha vazifalar allaqachon bajarilgan!');
 
     const keyboard = new InlineKeyboard();
     tasks.forEach((t) => keyboard.text(t.title, `complete_${t.id}`).row());
 
-    await ctx.reply("✅ Qaysi vazifani bajarilgan deb belgilaymiz?", {
+    await ctx.reply('Qaysi vazifani bajarilgan deb belgilaymiz?', {
       reply_markup: keyboard,
     });
   }
 
-  // ✅ Vazifani bajarilgan deb belgilash
   private async completeTask(ctx: MyContext) {
     const taskId = Number(ctx.match![1]);
     const task = await this.taskModel.findByPk(taskId);
 
-    if (!task) return ctx.answerCallbackQuery({ text: "❌ Vazifa topilmadi." });
+    if (!task) return ctx.answerCallbackQuery({ text: 'Vazifa topilmadi.' });
 
     task.isCompleted = true;
     await task.save();
 
-    await ctx.editMessageText(`✅ "${task.title}" bajarilgan deb belgilandi.`);
+    await ctx.editMessageText(`"${task.title}" bajarilgan deb belgilandi.`);
     await ctx.answerCallbackQuery();
   }
 
-  // ✅ O‘chirish uchun tugmalar
   private async showDeleteButtons(ctx: MyContext) {
     const tasks = await this.taskModel.findAll({
       where: { userId: ctx.from!.id },
     });
 
-    if (tasks.length === 0)
-      return ctx.reply("❌ Sizda hech qanday vazifa yo‘q.");
+    if (tasks.length === 0) return ctx.reply('Sizda hech qanday vazifa yo‘q.');
 
     const keyboard = new InlineKeyboard();
-    tasks.forEach((t) => keyboard.text(`🗑 ${t.title}`, `delete_${t.id}`).row());
+    tasks.forEach((t) =>
+      keyboard.text(`🗑 ${t.title}`, `delete_${t.id}`).row(),
+    );
 
-    await ctx.reply("🗑 Qaysi vazifani o‘chiraylik?", {
+    await ctx.reply('🗑 Qaysi vazifani o‘chiraylik?', {
       reply_markup: keyboard,
     });
   }
 
-  // ✅ Vazifani o‘chirish
   private async deleteTask(ctx: MyContext) {
     const taskId = Number(ctx.match![1]);
     const task = await this.taskModel.findByPk(taskId);
 
-    if (!task) return ctx.answerCallbackQuery({ text: "❌ Vazifa topilmadi." });
+    if (!task) return ctx.answerCallbackQuery({ text: 'Vazifa topilmadi.' });
 
     await task.destroy();
 
@@ -210,7 +198,6 @@ export class BotService implements OnModuleInit {
     await ctx.answerCallbackQuery();
   }
 
-  // ✅ Eslatma funksiyasi (har 1 daqiqada tekshiradi)
   private startReminder() {
     setInterval(async () => {
       const now = new Date();
@@ -219,18 +206,18 @@ export class BotService implements OnModuleInit {
       });
 
       for (const task of tasks) {
-        const [day, month, yearTime] = task.dueDate.split(".");
-        const [year, time] = yearTime.split(" ");
-        const [hour, minute] = time.split(":");
+        const [day, month, yearTime] = task.dueDate.split('.');
+        const [year, time] = yearTime.split(' ');
+        const [hour, minute] = time.split(':');
 
         const taskDate = new Date(
-          `${year}-${month}-${day}T${hour}:${minute}:00`
+          `${year}-${month}-${day}T${hour}:${minute}:00`,
         );
 
         if (taskDate <= now) {
           await this.bot.api.sendMessage(
             task.userId,
-            `⏰ Eslatma!\n${task.title} | 🚦 ${task.priority}`
+            ` Eslatma!\n${task.title} |  ${task.priority}`,
           );
           task.isNotified = true;
           await task.save();

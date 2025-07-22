@@ -1,12 +1,12 @@
 import { Column, DataType, Model, Table } from "sequelize-typescript";
 
-interface TaskCreationAttr {
-  userId: number;
-  title: string;
-  dueDate: string;
-  priority: "low" | "medium" | "high";
-  completed?: boolean
-}
+// interface TaskCreationAttr {
+//   userId: number;
+//   title: string;
+//   dueDate: string;
+//   priority: "low" | "medium" | "";
+//   completed?: boolean
+// }
 
 @Table({ tableName: "ToBot" })
 export class ToBot extends Model {
